@@ -1,0 +1,789 @@
+HW1-Titanic
+TTU-Pradnya
+November 2, 2016
+# Load packages
+library('ggplot2') # visualization
+library('ggthemes') # visualization
+library('scales') # visualization
+library('dplyr') # data manipulation
+## 
+## Attaching package: 'dplyr'
+## The following objects are masked from 'package:stats':
+## 
+##     filter, lag
+## The following objects are masked from 'package:base':
+## 
+##     intersect, setdiff, setequal, union
+library('VIM')
+## Loading required package: colorspace
+## Loading required package: grid
+## Loading required package: data.table
+## -------------------------------------------------------------------------
+## data.table + dplyr code now lives in dtplyr.
+## Please library(dtplyr)!
+## -------------------------------------------------------------------------
+## 
+## Attaching package: 'data.table'
+## The following objects are masked from 'package:dplyr':
+## 
+##     between, last
+## VIM is ready to use. 
+##  Since version 4.0.0 the GUI is in its own package VIMGUI.
+## 
+##           Please use the package to use the new (and old) GUI.
+## Suggestions and bug-reports can be submitted at: https://github.com/alexkowa/VIM/issues
+## 
+## Attaching package: 'VIM'
+## The following object is masked from 'package:datasets':
+## 
+##     sleep
+library('mice') # imputation
+## Loading required package: Rcpp
+## mice 2.25 2015-11-09
+library('randomForest') # classification algorithm
+## randomForest 4.6-12
+## Type rfNews() to see new features/changes/bug fixes.
+## 
+## Attaching package: 'randomForest'
+## The following object is masked from 'package:dplyr':
+## 
+##     combine
+## The following object is masked from 'package:ggplot2':
+## 
+##     margin
+library('caret')
+## Loading required package: lattice
+library('Amelia')
+## ## 
+## ## Amelia II: Multiple Imputation
+## ## (Version 1.7.4, built: 2015-12-05)
+## ## Copyright (C) 2005-2016 James Honaker, Gary King and Matthew Blackwell
+## ## Refer to http://gking.harvard.edu/amelia/ for more information
+## ##
+Load data in data frames
+train <- read.csv('D:/Pradnya/TTU/Fall 2016/Multivariate Analysis/Titanic/Titanic/train.csv', stringsAsFactors = F)
+test  <- read.csv('D:/Pradnya/TTU/Fall 2016/Multivariate Analysis/Titanic/Titanic/test.csv', stringsAsFactors = F)
+Combining test and train data as total for data massaging and cleaning. Keep a copy of it as orig_total
+orig_total  <- bind_rows(train, test) # bind training & test data
+total  <- bind_rows(train, test) # bind training & test data
+
+str(train)
+## 'data.frame':    891 obs. of  12 variables:
+##  $ PassengerId: int  1 2 3 4 5 6 7 8 9 10 ...
+##  $ Survived   : int  0 1 1 1 0 0 0 0 1 1 ...
+##  $ Pclass     : int  3 1 3 1 3 3 1 3 3 2 ...
+##  $ Name       : chr  "Braund, Mr. Owen Harris" "Cumings, Mrs. John Bradley (Florence Briggs Thayer)" "Heikkinen, Miss. Laina" "Futrelle, Mrs. Jacques Heath (Lily May Peel)" ...
+##  $ Sex        : chr  "male" "female" "female" "female" ...
+##  $ Age        : num  22 38 26 35 35 NA 54 2 27 14 ...
+##  $ SibSp      : int  1 1 0 1 0 0 0 3 0 1 ...
+##  $ Parch      : int  0 0 0 0 0 0 0 1 2 0 ...
+##  $ Ticket     : chr  "A/5 21171" "PC 17599" "STON/O2. 3101282" "113803" ...
+##  $ Fare       : num  7.25 71.28 7.92 53.1 8.05 ...
+##  $ Cabin      : chr  "" "C85" "" "C123" ...
+##  $ Embarked   : chr  "S" "C" "S" "S" ...
+str(test)
+## 'data.frame':    418 obs. of  11 variables:
+##  $ PassengerId: int  892 893 894 895 896 897 898 899 900 901 ...
+##  $ Pclass     : int  3 3 2 3 3 3 3 2 3 3 ...
+##  $ Name       : chr  "Kelly, Mr. James" "Wilkes, Mrs. James (Ellen Needs)" "Myles, Mr. Thomas Francis" "Wirz, Mr. Albert" ...
+##  $ Sex        : chr  "male" "female" "male" "male" ...
+##  $ Age        : num  34.5 47 62 27 22 14 30 26 18 21 ...
+##  $ SibSp      : int  0 1 0 0 1 0 0 1 0 2 ...
+##  $ Parch      : int  0 0 0 0 1 0 0 1 0 0 ...
+##  $ Ticket     : chr  "330911" "363272" "240276" "315154" ...
+##  $ Fare       : num  7.83 7 9.69 8.66 12.29 ...
+##  $ Cabin      : chr  "" "" "" "" ...
+##  $ Embarked   : chr  "Q" "S" "Q" "S" ...
+str(total)
+## 'data.frame':    1309 obs. of  12 variables:
+##  $ PassengerId: int  1 2 3 4 5 6 7 8 9 10 ...
+##  $ Survived   : int  0 1 1 1 0 0 0 0 1 1 ...
+##  $ Pclass     : int  3 1 3 1 3 3 1 3 3 2 ...
+##  $ Name       : chr  "Braund, Mr. Owen Harris" "Cumings, Mrs. John Bradley (Florence Briggs Thayer)" "Heikkinen, Miss. Laina" "Futrelle, Mrs. Jacques Heath (Lily May Peel)" ...
+##  $ Sex        : chr  "male" "female" "female" "female" ...
+##  $ Age        : num  22 38 26 35 35 NA 54 2 27 14 ...
+##  $ SibSp      : int  1 1 0 1 0 0 0 3 0 1 ...
+##  $ Parch      : int  0 0 0 0 0 0 0 1 2 0 ...
+##  $ Ticket     : chr  "A/5 21171" "PC 17599" "STON/O2. 3101282" "113803" ...
+##  $ Fare       : num  7.25 71.28 7.92 53.1 8.05 ...
+##  $ Cabin      : chr  "" "C85" "" "C123" ...
+##  $ Embarked   : chr  "S" "C" "S" "S" ...
+Check missing values
+missmap(total, main="Missing Map")
+
+Clean data
+#Get title for each passanger
+
+# Extract title from passenger names
+total$Title <- gsub('(.*, )|(\\..*)', '', total$Name)
+
+# Show title counts by gender
+table(total$Sex, total$Title)
+##         
+##          Capt Col Don Dona  Dr Jonkheer Lady Major Master Miss Mlle Mme
+##   female    0   0   0    1   1        0    1     0      0  260    2   1
+##   male      1   4   1    0   7        1    0     2     61    0    0   0
+##         
+##           Mr Mrs  Ms Rev Sir the Countess
+##   female   0 197   2   0   0            1
+##   male   757   0   0   8   1            0
+# Titles with very low cell counts to be combined to "rare" level
+D <- c('Dona', 'Lady', 'the Countess','Capt', 'Col', 'Don', 
+                'Dr', 'Major', 'Rev', 'Sir', 'Jonkheer')
+
+# Also reassign french titles accordingly
+total$Title[total$Title == 'Mlle']        <- 'Miss' 
+total$Title[total$Title == 'Ms']          <- 'Miss'
+total$Title[total$Title == 'Mme']         <- 'Mrs' 
+total$Title[total$Title %in% D]           <- 'Rare'
+
+# Show title counts by sex again
+table(total$Sex, total$Title)
+##         
+##          Master Miss  Mr Mrs Rare
+##   female      0  264   0 198    4
+##   male       61    0 757   0   25
+Impute Embarked value
+#Passangers missing Embarkment info
+total$PassengerId[total$Embarked =='']
+## [1]  62 830
+# Passengers 62 and 830 are missing Embarkment
+total[c(62, 830), 'Embarked']
+## [1] "" ""
+# Get rid of our missing passenger IDs
+embark_fare <- total %>%
+  filter(PassengerId != 62 & PassengerId != 830)
+
+ggplot(embark_fare, aes(x = Embarked, y = Fare, fill = factor(Pclass))) +
+  geom_boxplot() +
+  geom_hline(aes(yintercept=80),  # 80 is the fare paid by the missing embarked passangers
+             colour='red', linetype='dashed', lwd=1) +
+  scale_y_continuous(labels=dollar_format()) 
+## Warning: Removed 1 rows containing non-finite values (stat_boxplot).
+
+# Since their fare was $80 for 1st class, they most likely embarked from 'C'
+total$Embarked[c(62, 830)] <- 'C'
+Impute missing Fare.
+#Passanger with NA fare
+total$PassengerId[is.na(total$Fare)]
+## [1] 1044
+ggplot(total[total$Pclass == '3' & total$Embarked == 'S' & total$Sex=='male', ], 
+       aes(x = Fare)) +
+  geom_density(alpha=0.4) + 
+  geom_vline(aes(xintercept=median(Fare, na.rm=T)),
+             colour='red', linetype='dashed', lwd=1) +
+  scale_x_continuous(labels=dollar_format()) 
+## Warning: Removed 1 rows containing non-finite values (stat_density).
+
+# Replace missing fare value with median fare for class/embarkment/Sex
+total$Fare[1044] <- median(total[total$Pclass == '3' & total$Embarked == 'S' & total$Sex =='male', ]$Fare, na.rm = TRUE)
+Imputting missing Age values
+# Show number of missing Age values
+sum(is.na(total$Age))
+## [1] 263
+# Make variables factors into factors
+
+total$PassengerId <- as.factor(total$PassengerId)
+total$Survived <- as.factor(total$Survived)
+total$Pclass <- as.factor(total$Pclass)
+total$Sex <- as.factor(total$Sex)
+total$Embarked <- as.factor(total$Embarked)
+total$Title <- as.factor(total$Title)
+#total$Parch <- as.factor(total$Parch)
+
+str(total)
+## 'data.frame':    1309 obs. of  13 variables:
+##  $ PassengerId: Factor w/ 1309 levels "1","2","3","4",..: 1 2 3 4 5 6 7 8 9 10 ...
+##  $ Survived   : Factor w/ 2 levels "0","1": 1 2 2 2 1 1 1 1 2 2 ...
+##  $ Pclass     : Factor w/ 3 levels "1","2","3": 3 1 3 1 3 3 1 3 3 2 ...
+##  $ Name       : chr  "Braund, Mr. Owen Harris" "Cumings, Mrs. John Bradley (Florence Briggs Thayer)" "Heikkinen, Miss. Laina" "Futrelle, Mrs. Jacques Heath (Lily May Peel)" ...
+##  $ Sex        : Factor w/ 2 levels "female","male": 2 1 1 1 2 2 2 2 1 1 ...
+##  $ Age        : num  22 38 26 35 35 NA 54 2 27 14 ...
+##  $ SibSp      : int  1 1 0 1 0 0 0 3 0 1 ...
+##  $ Parch      : int  0 0 0 0 0 0 0 1 2 0 ...
+##  $ Ticket     : chr  "A/5 21171" "PC 17599" "STON/O2. 3101282" "113803" ...
+##  $ Fare       : num  7.25 71.28 7.92 53.1 8.05 ...
+##  $ Cabin      : chr  "" "C85" "" "C123" ...
+##  $ Embarked   : Factor w/ 3 levels "C","Q","S": 3 1 3 3 3 2 3 3 3 1 ...
+##  $ Title      : Factor w/ 5 levels "Master","Miss",..: 3 4 2 4 3 3 3 1 4 4 ...
+# Set a random seed
+set.seed(116)
+
+#Mice pattern
+md.pattern(total)
+## Warning in data.matrix(x): NAs introduced by coercion
+
+## Warning in data.matrix(x): NAs introduced by coercion
+
+## Warning in data.matrix(x): NAs introduced by coercion
+##     PassengerId Pclass Sex SibSp Parch Fare Embarked Title Age Ticket
+## 521           1      1   1     1     1    1        1     1   1      1
+## 232           1      1   1     1     1    1        1     1   1      1
+## 140           1      1   1     1     1    1        1     1   0      1
+## 193           1      1   1     1     1    1        1     1   1      0
+##  64           1      1   1     1     1    1        1     1   0      1
+## 100           1      1   1     1     1    1        1     1   1      0
+##  37           1      1   1     1     1    1        1     1   0      0
+##  22           1      1   1     1     1    1        1     1   0      0
+##               0      0   0     0     0    0        0     0 263    352
+##     Survived Name Cabin     
+## 521        1    0     0    2
+## 232        0    0     0    3
+## 140        1    0     0    3
+## 193        1    0     0    3
+##  64        0    0     0    4
+## 100        0    0     0    4
+##  37        1    0     0    4
+##  22        0    0     0    5
+##          418 1309  1309 3651
+aggr_plot <- aggr(total, col=c('navyblue','red'), numbers=TRUE, sortVars=TRUE, labels=names(data), cex.axis=.7, gap=3, ylab=c("Histogram of missing data","Pattern"))
+
+## 
+##  Variables sorted by number of missings: 
+##     Variable     Count
+##     Survived 0.3193277
+##          Age 0.2009167
+##  PassengerId 0.0000000
+##       Pclass 0.0000000
+##         Name 0.0000000
+##          Sex 0.0000000
+##        SibSp 0.0000000
+##        Parch 0.0000000
+##       Ticket 0.0000000
+##         Fare 0.0000000
+##        Cabin 0.0000000
+##     Embarked 0.0000000
+##        Title 0.0000000
+#20% of Age data is missing. Can't omit/or do mean imputation
+
+# Perform mice imputation, excluding certain less-than-useful variables:
+mice_mod <- mice(total[, !names(total) %in% c('PassengerId','Name','Ticket','Cabin','Survived')], method='rf') 
+## 
+##  iter imp variable
+##   1   1  Age
+##   1   2  Age
+##   1   3  Age
+##   1   4  Age
+##   1   5  Age
+##   2   1  Age
+##   2   2  Age
+##   2   3  Age
+##   2   4  Age
+##   2   5  Age
+##   3   1  Age
+##   3   2  Age
+##   3   3  Age
+##   3   4  Age
+##   3   5  Age
+##   4   1  Age
+##   4   2  Age
+##   4   3  Age
+##   4   4  Age
+##   4   5  Age
+##   5   1  Age
+##   5   2  Age
+##   5   3  Age
+##   5   4  Age
+##   5   5  Age
+# Save the complete output 
+mice_output <- complete(mice_mod)
+
+# Plot age distributions
+par(mfrow=c(1,2))
+hist(total$Age, freq=F, main='Age: Original Data', 
+     col='darkgreen', ylim=c(0,0.04))
+grid(10, 10, lwd = 2) 
+hist(mice_output$Age, freq=F, main='Age: MICE Output', 
+     col='lightgreen', ylim=c(0,0.04))
+grid(10, 10, lwd = 2) 
+
+par(mfrow=c(1,1))  #Reset the plot window
+
+# Replace Age values from the mice model only for missing records
+total$Age[total$PassengerId[is.na(total$Age)]] <- mice_output$Age[total$PassengerId[is.na(total$Age)]]
+
+# Show new number of missing Age values
+sum(is.na(total$Age))
+## [1] 0
+Exploring ‘Women and children first policy’
+# First we'll look at the relationship between age & survival
+ggplot(total[1:891,], aes(Age, fill = factor(Survived))) + 
+  geom_histogram() + 
+  facet_grid(.~Sex) + 
+  theme_few()
+## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+
+# Create the column child, and indicate whether child or adult
+total$Child[total$Age < 18] <- 'Child'
+total$Child[total$Age >= 18] <- 'Adult'
+
+# Show counts
+table(total$Child, total$Survived)
+##        
+##           0   1
+##   Adult 483 271
+##   Child  66  71
+# Adding Mother variable
+total$Mother <- 'Not Mother'
+total$Mother[total$Sex == 'female' & total$Parch > 0 & total$Age > 18 & total$Title != 'Miss'] <- 'Mother'
+
+# Show counts
+table(total$Mother, total$Survived)
+##             
+##                0   1
+##   Mother      16  39
+##   Not Mother 533 303
+# Factoriz the two new factor variables
+total$Child  <- factor(total$Child)
+total$Mother <- factor(total$Mother)
+Seperate Train and Test data
+train <- total[1:891,]
+#train <- train[,c(1,2,3,5,6,7,8,10,12,13,15,16)]
+
+
+test <- total[892:1309,]
+#test <- test[,c(1,3,5,6,7,8,10,12,13,15,16)]
+
+str(train)
+## 'data.frame':    891 obs. of  15 variables:
+##  $ PassengerId: Factor w/ 1309 levels "1","2","3","4",..: 1 2 3 4 5 6 7 8 9 10 ...
+##  $ Survived   : Factor w/ 2 levels "0","1": 1 2 2 2 1 1 1 1 2 2 ...
+##  $ Pclass     : Factor w/ 3 levels "1","2","3": 3 1 3 1 3 3 1 3 3 2 ...
+##  $ Name       : chr  "Braund, Mr. Owen Harris" "Cumings, Mrs. John Bradley (Florence Briggs Thayer)" "Heikkinen, Miss. Laina" "Futrelle, Mrs. Jacques Heath (Lily May Peel)" ...
+##  $ Sex        : Factor w/ 2 levels "female","male": 2 1 1 1 2 2 2 2 1 1 ...
+##  $ Age        : num  22 38 26 35 35 21 54 2 27 14 ...
+##  $ SibSp      : int  1 1 0 1 0 0 0 3 0 1 ...
+##  $ Parch      : int  0 0 0 0 0 0 0 1 2 0 ...
+##  $ Ticket     : chr  "A/5 21171" "PC 17599" "STON/O2. 3101282" "113803" ...
+##  $ Fare       : num  7.25 71.28 7.92 53.1 8.05 ...
+##  $ Cabin      : chr  "" "C85" "" "C123" ...
+##  $ Embarked   : Factor w/ 3 levels "C","Q","S": 3 1 3 3 3 2 3 3 3 1 ...
+##  $ Title      : Factor w/ 5 levels "Master","Miss",..: 3 4 2 4 3 3 3 1 4 4 ...
+##  $ Child      : Factor w/ 2 levels "Adult","Child": 1 1 1 1 1 1 1 2 1 2 ...
+##  $ Mother     : Factor w/ 2 levels "Mother","Not Mother": 2 2 2 2 2 2 2 2 1 2 ...
+str(test)
+## 'data.frame':    418 obs. of  15 variables:
+##  $ PassengerId: Factor w/ 1309 levels "1","2","3","4",..: 892 893 894 895 896 897 898 899 900 901 ...
+##  $ Survived   : Factor w/ 2 levels "0","1": NA NA NA NA NA NA NA NA NA NA ...
+##  $ Pclass     : Factor w/ 3 levels "1","2","3": 3 3 2 3 3 3 3 2 3 3 ...
+##  $ Name       : chr  "Kelly, Mr. James" "Wilkes, Mrs. James (Ellen Needs)" "Myles, Mr. Thomas Francis" "Wirz, Mr. Albert" ...
+##  $ Sex        : Factor w/ 2 levels "female","male": 2 1 2 2 1 2 1 2 1 2 ...
+##  $ Age        : num  34.5 47 62 27 22 14 30 26 18 21 ...
+##  $ SibSp      : int  0 1 0 0 1 0 0 1 0 2 ...
+##  $ Parch      : int  0 0 0 0 1 0 0 1 0 0 ...
+##  $ Ticket     : chr  "330911" "363272" "240276" "315154" ...
+##  $ Fare       : num  7.83 7 9.69 8.66 12.29 ...
+##  $ Cabin      : chr  "" "" "" "" ...
+##  $ Embarked   : Factor w/ 3 levels "C","Q","S": 2 3 2 3 3 3 2 3 1 3 ...
+##  $ Title      : Factor w/ 5 levels "Master","Miss",..: 3 4 3 3 4 3 2 3 4 3 ...
+##  $ Child      : Factor w/ 2 levels "Adult","Child": 1 1 1 1 1 2 1 1 1 1 ...
+##  $ Mother     : Factor w/ 2 levels "Mother","Not Mother": 2 2 2 2 1 2 2 2 2 2 ...
+Visualizations
+barplot(table(train$Survived), main="Passenger Survival",  names= c("Perished", "Survived"))
+
+barplot(table(train$Pclass), main="Passenger Class",  names= c("first", "second", "third"))
+
+barplot(table(train$Sex), main="Passenger Gender")
+
+hist(train$Age, main="Passenger Age", xlab = "Age")
+
+barplot(table(train$SibSp), main="Passenger Siblings")
+
+barplot(table(train$Parch), main="Passenger Parch")
+
+hist(train$Fare, main="Passenger Fare", xlab = "Fare")
+
+barplot(table(train$Embarked), main="Port of Embarkation")
+
+counts = table( train$Survived, train$Sex) 
+barplot(counts,  col=c("darkblue","red"), legend = c("Perished", "Survived"), main = "Passenger Survival by Sex")
+
+counts = table( train$Survived, train$Pclass) 
+barplot(counts,  col=c("darkblue","red"), legend =c("Perished", "Survived"), main= "Titanic Class Bar Plot" )
+
+counts = table( train$Sex, train$Pclass) 
+barplot(counts,  col=c("darkblue","red"), legend = rownames(counts), main= "Passenger Gender by Class")
+
+hist(train$Age[which(train$Survived == "0")], main= "Passenger Age Histogram", xlab="Age", ylab="Count", col ="blue", breaks=seq(0,80,by=2))
+
+hist(train$Age[which(train$Survived == "1")], col ="red", add = T, breaks=seq(0,80,by=2))
+
+ boxplot(train$Age ~ train$Survived, main="Passenger Survival by Age", xlab="Survived", ylab="Age")
+
+Random Forest for prediction
+# Build the model (note: not all possible variables are used)
+rf_model <- randomForest(factor(Survived) ~
+                           Pclass + Sex + Age + SibSp + Parch + 
+                           Fare + Embarked + Title + 
+                           Child + Mother, data = train)
+
+print(rf_model)
+## 
+## Call:
+##  randomForest(formula = factor(Survived) ~ Pclass + Sex + Age +      SibSp + Parch + Fare + Embarked + Title + Child + Mother,      data = train) 
+##                Type of random forest: classification
+##                      Number of trees: 500
+## No. of variables tried at each split: 3
+## 
+##         OOB estimate of  error rate: 16.27%
+## Confusion matrix:
+##     0   1 class.error
+## 0 501  48  0.08743169
+## 1  97 245  0.28362573
+# Show model error
+plot(rf_model, ylim=c(0,0.40))
+legend('topright', colnames(rf_model$err.rate), col=1:3, fill=1:3)
+
+rf_prediction<- predict(object=rf_model, test)
+rf_solution <- data.frame(PassengerID = test$PassengerId, Survived = rf_prediction)
+write.csv(rf_solution, file = 'rf_predicted_Solution.csv', row.names = F)
+Random forest with k-fold cross-validation
+#Cross-Validation
+
+set.seed(1234)
+splitIndex <- createDataPartition(train[,'Survived'], p = .75, list = FALSE, times = 1)
+split_train <- train[ splitIndex,]
+split_test  <- train[-splitIndex,]
+
+train_control <- trainControl(method="cv", number = 9)
+grid <- expand.grid(.fL=c(0), .usekernel=c(FALSE))
+
+
+rf_cv_model <- train(split_train[,c(3,5,6,7,8,10,12,13,14,15)],
+                  split_train[,'Survived'], trControl=train_control,method="rf")
+
+print(rf_cv_model)
+## Random Forest 
+## 
+## 669 samples
+##  10 predictor
+##   2 classes: '0', '1' 
+## 
+## No pre-processing
+## Resampling: Cross-Validated (9 fold) 
+## Summary of sample sizes: 595, 595, 594, 595, 596, 594, ... 
+## Resampling results across tuning parameters:
+## 
+##   mtry  Accuracy   Kappa    
+##    2    0.8265589  0.6216483
+##    6    0.8251591  0.6235901
+##   10    0.8146075  0.6033705
+## 
+## Accuracy was used to select the optimal model using  the largest value.
+## The final value used for the model was mtry = 2.
+# Run model for part of the train data
+rf_cv_prediction<- predict(object=rf_cv_model, split_test[,c(3,5,6,7,8,10,12,13,14,15)], type='raw')
+
+# Get accuracy for the model
+print(postResample(pred=rf_cv_prediction, obs=as.factor(split_test[,'Survived'])))
+##  Accuracy     Kappa 
+## 0.8243243 0.6323567
+# Run model for test data
+rf_cv_prediction<- predict(object=rf_cv_model, test[,c(3,5,6,7,8,10,12,13,14,15)], type='raw')
+
+#save solution
+solution <- data.frame(PassengerID = test$PassengerId, Survived = rf_cv_prediction)
+write.csv(solution, file = 'rf_cv_predicted_Solution.csv', row.names = F)
+Bayesian Generalized Linear Model
+bytrain_control <- trainControl(method='repeatedCV', repeats=5,savePred=T,verboseIter=TRUE )
+
+by_cv_model <- train(split_train[,c(3,5,6,7,8,10,12,13,14,15)],
+                  split_train[,'Survived'] , method='bayesglm',  trControl=bytrain_control,preProc = c("center","scale"))
+## Loading required package: arm
+## Loading required package: MASS
+## 
+## Attaching package: 'MASS'
+## The following object is masked from 'package:dplyr':
+## 
+##     select
+## Loading required package: Matrix
+## Loading required package: lme4
+## 
+## arm (Version 1.9-1, built: 2016-8-21)
+## Working directory is D:/Pradnya/TTU/Fall 2016/Multivariate Analysis/Titanic/Titanic
+## 
+## Attaching package: 'arm'
+## The following object is masked from 'package:scales':
+## 
+##     rescale
+## + Fold01.Rep1: parameter=none 
+## - Fold01.Rep1: parameter=none 
+## + Fold02.Rep1: parameter=none 
+## - Fold02.Rep1: parameter=none 
+## + Fold03.Rep1: parameter=none 
+## - Fold03.Rep1: parameter=none 
+## + Fold04.Rep1: parameter=none 
+## - Fold04.Rep1: parameter=none 
+## + Fold05.Rep1: parameter=none 
+## - Fold05.Rep1: parameter=none 
+## + Fold06.Rep1: parameter=none 
+## - Fold06.Rep1: parameter=none 
+## + Fold07.Rep1: parameter=none 
+## - Fold07.Rep1: parameter=none 
+## + Fold08.Rep1: parameter=none 
+## - Fold08.Rep1: parameter=none 
+## + Fold09.Rep1: parameter=none 
+## - Fold09.Rep1: parameter=none 
+## + Fold10.Rep1: parameter=none 
+## - Fold10.Rep1: parameter=none 
+## + Fold11.Rep1: parameter=none 
+## - Fold11.Rep1: parameter=none 
+## + Fold12.Rep1: parameter=none 
+## - Fold12.Rep1: parameter=none 
+## + Fold13.Rep1: parameter=none 
+## - Fold13.Rep1: parameter=none 
+## + Fold14.Rep1: parameter=none 
+## - Fold14.Rep1: parameter=none 
+## + Fold15.Rep1: parameter=none 
+## - Fold15.Rep1: parameter=none 
+## + Fold16.Rep1: parameter=none 
+## - Fold16.Rep1: parameter=none 
+## + Fold17.Rep1: parameter=none 
+## - Fold17.Rep1: parameter=none 
+## + Fold18.Rep1: parameter=none 
+## - Fold18.Rep1: parameter=none 
+## + Fold19.Rep1: parameter=none 
+## - Fold19.Rep1: parameter=none 
+## + Fold20.Rep1: parameter=none 
+## - Fold20.Rep1: parameter=none 
+## + Fold21.Rep1: parameter=none 
+## - Fold21.Rep1: parameter=none 
+## + Fold22.Rep1: parameter=none 
+## - Fold22.Rep1: parameter=none 
+## + Fold23.Rep1: parameter=none 
+## - Fold23.Rep1: parameter=none 
+## + Fold24.Rep1: parameter=none 
+## - Fold24.Rep1: parameter=none 
+## + Fold25.Rep1: parameter=none 
+## - Fold25.Rep1: parameter=none 
+## + Fold01.Rep2: parameter=none 
+## - Fold01.Rep2: parameter=none 
+## + Fold02.Rep2: parameter=none 
+## - Fold02.Rep2: parameter=none 
+## + Fold03.Rep2: parameter=none 
+## - Fold03.Rep2: parameter=none 
+## + Fold04.Rep2: parameter=none 
+## - Fold04.Rep2: parameter=none 
+## + Fold05.Rep2: parameter=none 
+## - Fold05.Rep2: parameter=none 
+## + Fold06.Rep2: parameter=none 
+## - Fold06.Rep2: parameter=none 
+## + Fold07.Rep2: parameter=none 
+## - Fold07.Rep2: parameter=none 
+## + Fold08.Rep2: parameter=none 
+## - Fold08.Rep2: parameter=none 
+## + Fold09.Rep2: parameter=none 
+## - Fold09.Rep2: parameter=none 
+## + Fold10.Rep2: parameter=none 
+## - Fold10.Rep2: parameter=none 
+## + Fold11.Rep2: parameter=none 
+## - Fold11.Rep2: parameter=none 
+## + Fold12.Rep2: parameter=none 
+## - Fold12.Rep2: parameter=none 
+## + Fold13.Rep2: parameter=none 
+## - Fold13.Rep2: parameter=none 
+## + Fold14.Rep2: parameter=none 
+## - Fold14.Rep2: parameter=none 
+## + Fold15.Rep2: parameter=none 
+## - Fold15.Rep2: parameter=none 
+## + Fold16.Rep2: parameter=none 
+## - Fold16.Rep2: parameter=none 
+## + Fold17.Rep2: parameter=none 
+## - Fold17.Rep2: parameter=none 
+## + Fold18.Rep2: parameter=none 
+## - Fold18.Rep2: parameter=none 
+## + Fold19.Rep2: parameter=none 
+## - Fold19.Rep2: parameter=none 
+## + Fold20.Rep2: parameter=none 
+## - Fold20.Rep2: parameter=none 
+## + Fold21.Rep2: parameter=none 
+## - Fold21.Rep2: parameter=none 
+## + Fold22.Rep2: parameter=none 
+## - Fold22.Rep2: parameter=none 
+## + Fold23.Rep2: parameter=none 
+## - Fold23.Rep2: parameter=none 
+## + Fold24.Rep2: parameter=none 
+## - Fold24.Rep2: parameter=none 
+## + Fold25.Rep2: parameter=none 
+## - Fold25.Rep2: parameter=none 
+## + Fold01.Rep3: parameter=none 
+## - Fold01.Rep3: parameter=none 
+## + Fold02.Rep3: parameter=none 
+## - Fold02.Rep3: parameter=none 
+## + Fold03.Rep3: parameter=none 
+## - Fold03.Rep3: parameter=none 
+## + Fold04.Rep3: parameter=none 
+## - Fold04.Rep3: parameter=none 
+## + Fold05.Rep3: parameter=none 
+## - Fold05.Rep3: parameter=none 
+## + Fold06.Rep3: parameter=none 
+## - Fold06.Rep3: parameter=none 
+## + Fold07.Rep3: parameter=none 
+## - Fold07.Rep3: parameter=none 
+## + Fold08.Rep3: parameter=none 
+## - Fold08.Rep3: parameter=none 
+## + Fold09.Rep3: parameter=none 
+## - Fold09.Rep3: parameter=none 
+## + Fold10.Rep3: parameter=none 
+## - Fold10.Rep3: parameter=none 
+## + Fold11.Rep3: parameter=none 
+## - Fold11.Rep3: parameter=none 
+## + Fold12.Rep3: parameter=none 
+## - Fold12.Rep3: parameter=none 
+## + Fold13.Rep3: parameter=none 
+## - Fold13.Rep3: parameter=none 
+## + Fold14.Rep3: parameter=none 
+## - Fold14.Rep3: parameter=none 
+## + Fold15.Rep3: parameter=none 
+## - Fold15.Rep3: parameter=none 
+## + Fold16.Rep3: parameter=none 
+## - Fold16.Rep3: parameter=none 
+## + Fold17.Rep3: parameter=none 
+## - Fold17.Rep3: parameter=none 
+## + Fold18.Rep3: parameter=none 
+## - Fold18.Rep3: parameter=none 
+## + Fold19.Rep3: parameter=none 
+## - Fold19.Rep3: parameter=none 
+## + Fold20.Rep3: parameter=none 
+## - Fold20.Rep3: parameter=none 
+## + Fold21.Rep3: parameter=none 
+## - Fold21.Rep3: parameter=none 
+## + Fold22.Rep3: parameter=none 
+## - Fold22.Rep3: parameter=none 
+## + Fold23.Rep3: parameter=none 
+## - Fold23.Rep3: parameter=none 
+## + Fold24.Rep3: parameter=none 
+## - Fold24.Rep3: parameter=none 
+## + Fold25.Rep3: parameter=none 
+## - Fold25.Rep3: parameter=none 
+## + Fold01.Rep4: parameter=none 
+## - Fold01.Rep4: parameter=none 
+## + Fold02.Rep4: parameter=none 
+## - Fold02.Rep4: parameter=none 
+## + Fold03.Rep4: parameter=none 
+## - Fold03.Rep4: parameter=none 
+## + Fold04.Rep4: parameter=none 
+## - Fold04.Rep4: parameter=none 
+## + Fold05.Rep4: parameter=none 
+## - Fold05.Rep4: parameter=none 
+## + Fold06.Rep4: parameter=none 
+## - Fold06.Rep4: parameter=none 
+## + Fold07.Rep4: parameter=none 
+## - Fold07.Rep4: parameter=none 
+## + Fold08.Rep4: parameter=none 
+## - Fold08.Rep4: parameter=none 
+## + Fold09.Rep4: parameter=none 
+## - Fold09.Rep4: parameter=none 
+## + Fold10.Rep4: parameter=none 
+## - Fold10.Rep4: parameter=none 
+## + Fold11.Rep4: parameter=none 
+## - Fold11.Rep4: parameter=none 
+## + Fold12.Rep4: parameter=none 
+## - Fold12.Rep4: parameter=none 
+## + Fold13.Rep4: parameter=none 
+## - Fold13.Rep4: parameter=none 
+## + Fold14.Rep4: parameter=none 
+## - Fold14.Rep4: parameter=none 
+## + Fold15.Rep4: parameter=none 
+## - Fold15.Rep4: parameter=none 
+## + Fold16.Rep4: parameter=none 
+## - Fold16.Rep4: parameter=none 
+## + Fold17.Rep4: parameter=none 
+## - Fold17.Rep4: parameter=none 
+## + Fold18.Rep4: parameter=none 
+## - Fold18.Rep4: parameter=none 
+## + Fold19.Rep4: parameter=none 
+## - Fold19.Rep4: parameter=none 
+## + Fold20.Rep4: parameter=none 
+## - Fold20.Rep4: parameter=none 
+## + Fold21.Rep4: parameter=none 
+## - Fold21.Rep4: parameter=none 
+## + Fold22.Rep4: parameter=none 
+## - Fold22.Rep4: parameter=none 
+## + Fold23.Rep4: parameter=none 
+## - Fold23.Rep4: parameter=none 
+## + Fold24.Rep4: parameter=none 
+## - Fold24.Rep4: parameter=none 
+## + Fold25.Rep4: parameter=none 
+## - Fold25.Rep4: parameter=none 
+## + Fold01.Rep5: parameter=none 
+## - Fold01.Rep5: parameter=none 
+## + Fold02.Rep5: parameter=none 
+## - Fold02.Rep5: parameter=none 
+## + Fold03.Rep5: parameter=none 
+## - Fold03.Rep5: parameter=none 
+## + Fold04.Rep5: parameter=none 
+## - Fold04.Rep5: parameter=none 
+## + Fold05.Rep5: parameter=none 
+## - Fold05.Rep5: parameter=none 
+## + Fold06.Rep5: parameter=none 
+## - Fold06.Rep5: parameter=none 
+## + Fold07.Rep5: parameter=none 
+## - Fold07.Rep5: parameter=none 
+## + Fold08.Rep5: parameter=none 
+## - Fold08.Rep5: parameter=none 
+## + Fold09.Rep5: parameter=none 
+## - Fold09.Rep5: parameter=none 
+## + Fold10.Rep5: parameter=none 
+## - Fold10.Rep5: parameter=none 
+## + Fold11.Rep5: parameter=none 
+## - Fold11.Rep5: parameter=none 
+## + Fold12.Rep5: parameter=none 
+## - Fold12.Rep5: parameter=none 
+## + Fold13.Rep5: parameter=none 
+## - Fold13.Rep5: parameter=none 
+## + Fold14.Rep5: parameter=none 
+## - Fold14.Rep5: parameter=none 
+## + Fold15.Rep5: parameter=none 
+## - Fold15.Rep5: parameter=none 
+## + Fold16.Rep5: parameter=none 
+## - Fold16.Rep5: parameter=none 
+## + Fold17.Rep5: parameter=none 
+## - Fold17.Rep5: parameter=none 
+## + Fold18.Rep5: parameter=none 
+## - Fold18.Rep5: parameter=none 
+## + Fold19.Rep5: parameter=none 
+## - Fold19.Rep5: parameter=none 
+## + Fold20.Rep5: parameter=none 
+## - Fold20.Rep5: parameter=none 
+## + Fold21.Rep5: parameter=none 
+## - Fold21.Rep5: parameter=none 
+## + Fold22.Rep5: parameter=none 
+## - Fold22.Rep5: parameter=none 
+## + Fold23.Rep5: parameter=none 
+## - Fold23.Rep5: parameter=none 
+## + Fold24.Rep5: parameter=none 
+## - Fold24.Rep5: parameter=none 
+## + Fold25.Rep5: parameter=none 
+## - Fold25.Rep5: parameter=none 
+## Aggregating results
+## Fitting final model on full training set
+print(by_cv_model)
+## Bayesian Generalized Linear Model 
+## 
+## 669 samples
+##  10 predictor
+##   2 classes: '0', '1' 
+## 
+## Pre-processing: centered (4), scaled (4), ignore (6) 
+## Resampling: Cross-Validated (25 fold, repeated 5 times) 
+## Summary of sample sizes: 642, 643, 642, 643, 643, 642, ... 
+## Resampling results:
+## 
+##   Accuracy   Kappa    
+##   0.8289402  0.6297643
+## 
+## 
+# Run model for part of the train data
+by_cv_prediction<- predict(object=by_cv_model, split_test[,c(3,5,6,7,8,10,12,13,14,15)])
+
+# Get accuracy for the model
+print(postResample(pred=by_cv_prediction, obs=as.factor(split_test[,'Survived'])))
+##  Accuracy     Kappa 
+## 0.8243243 0.6387382
+# Run model for test data
+by_cv_prediction<- predict(object=by_cv_model, test[,c(3,5,6,7,8,10,12,13,14,15)], type='raw')
+
+#save solution
+solution <- data.frame(PassengerID = test$PassengerId, Survived = by_cv_prediction)
+write.csv(solution, file = 'by_cv_predicted_Solution.csv', row.names = F)
